@@ -1,0 +1,5 @@
+env/
+dxl/
+__pycache__/
+saida.txt
+misp_events.json

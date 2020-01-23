@@ -46,7 +46,6 @@ def create_arg_parser():
     parser.add_argument("action", help="Action to execute on events in the MISP instance. Can be one of: export, delete, tag", metavar="ACTION")
     parser.add_argument("-c", "--configfile", help="Configuration file. Default is misp_util.conf", default="misp_util.conf")
     # TODO
-    #parser.add_argument("-d", "--dryrun", help="Dryrun mode. No changes are made to MISP.", action='store_true', default=False)
     parser.add_argument("-i", "--eventids", help="Focus actions on events with specific event IDs. Sample syntax: \"1024||123\".")
     parser.add_argument("-l", "--loglevel", help="Logging level (DEBUG, INFO or ERROR). Default is INFO.", default="INFO")
     parser.add_argument("-p", "--poll", help="Enable polling mode, based on MISP event publish_timestamp and the script's chosen time window.", action='store_true', default=False)
@@ -84,7 +83,7 @@ def init_export_plugins():
     path = conf_util.cfg['ExportPlugins']['Dir']
     PluginsMainModule = "__init__"
     possiblePlugins = os.listdir(path)
-    logger.debug("Going to check export plugins we need to load...")
+    logger.debug("Going to check the export plugins we need to load...")
     for i in possiblePlugins:
         module = None
         location = os.path.join(path, i)
@@ -113,15 +112,23 @@ def init_export_plugins():
     return True
 
 def action_export(timeframe, search_query, event_ids, event_tags):
+    """
+    Function related to the 'export' action. Execute the MISP search through REST API and call export plugins.
+    """    
     logger.debug("EXPORT - Calling MISP search API...")    
     if search_query == None :
         result = misp.search(publish_timestamp=timeframe, eventid=event_ids, tags=event_tags, published=True, pythonify=False)
     else :
         result = misp.search(publish_timestamp=timeframe, searchall=search_query, published=True, pythonify=False)
+    
+    #
+    # Call plugins with the results array...
+    #
     if len(result) > 0 :
-        logger.info("MISP search executed. %s event(s) found. Exporting...", len(result))
-        logger.debug(json.dumps(result, indent=4, sort_keys=True))
-        print(result)
+        logger.info("MISP search executed. %s event(s) found. Calling export plugins...", len(result))
+        global pluginsList
+        for plugin in pluginsList :
+            plugin.export(result)
     else:
         logger.info("MISP search executed. No events found.")
 
@@ -151,7 +158,6 @@ def main(argv):
                               ssl=True if conf_util.cfg['MISP']['VerifyCert'] == 'True' else False,
                               debug=True if conf_util.cfg['MISP']['Debug'] == 'True' else False,
                               cert=conf_util.cfg['MISP']['ClientCert'])
-
     except Exception as e:
         logger.error("Could not connect to MISP ({0}).".format(e.message))
         exit(1)
@@ -181,7 +187,6 @@ def main(argv):
             action_export(timeout + "m", args.searchquery, args.eventids, args.eventtags)
             logger.debug("Going to sleep for %s minute(s)...", timeout)
             time.sleep(int(timeout) * 60)
-
     else :
         # ONE SHOT
         logger.debug("Mode: one-shot")

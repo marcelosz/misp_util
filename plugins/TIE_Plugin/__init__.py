@@ -61,8 +61,7 @@ class TIE_Plugin(PluginBase) :
     def set_tie_reputation(self, trust_level, hash_type, hash_value, comment_str):
         if self.tie_client :
             try:
-                self.tie_client.set_external_file_reputation(TIE_REPUTATION, {hash_type: hash_value}, filename='MISP Event-based Reputation', comment=comment_str)
-                #self.tie_client.set_external_file_reputation(TIE_REPUTATION, {hash_type: hash_value}, filename='FROM MISP', comment="Test")
+                self.tie_client.set_external_file_reputation(TIE_REPUTATION, {hash_type: hash_value}, filename=comment_str, comment=comment_str)
                 logger.debug(_plugin_name + " : Reputation set (%s)", comment_str)
             except ValueError as e:
                 logger.error(_plugin_name + " : Error while trying to set TIE reputation (%s)", str(e))
